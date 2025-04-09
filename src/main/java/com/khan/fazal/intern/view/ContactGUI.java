@@ -9,6 +9,8 @@ import javax.swing.event.DocumentListener;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
 
 /**
  * GUI view for the Contact Manager application.
@@ -19,6 +21,10 @@ public class ContactGUI extends JFrame {
     private final DefaultTableModel tableModel;
     private final JTable contactTable;
     private final JTextField searchField;
+
+    // Debounce variables
+    private Timer debounceTimer = new Timer();
+    private static final long DEBOUNCE_DELAY = 1000; // 1 second delay
 
     /**
      * Initializes the GUI components, sets up layout,
@@ -54,18 +60,18 @@ public class ContactGUI extends JFrame {
         bottomPanel.add(refreshBtn);
         add(bottomPanel, BorderLayout.SOUTH);
 
-        // Search field listener for real-time filtering
+        // Search field listener with debounce
         searchField.getDocument().addDocumentListener(new DocumentListener() {
             public void insertUpdate(DocumentEvent e) {
-                searchAndUpdate();
+                debouncedSearchAndUpdate();
             }
 
             public void removeUpdate(DocumentEvent e) {
-                searchAndUpdate();
+                debouncedSearchAndUpdate();
             }
 
             public void changedUpdate(DocumentEvent e) {
-                searchAndUpdate();
+                debouncedSearchAndUpdate();
             }
         });
 
@@ -89,6 +95,23 @@ public class ContactGUI extends JFrame {
 
         refreshTable();
         setVisible(true);
+    }
+
+    /**
+     * Debounced search method triggered on typing in search field.
+     * Delays search until typing pauses for a certain duration.
+     */
+    private void debouncedSearchAndUpdate() {
+        debounceTimer.cancel(); // Cancel existing scheduled task
+        debounceTimer = new Timer(); // Create a new timer instance
+
+        debounceTimer.schedule(new TimerTask() {
+            @Override
+            public void run() {
+                // Ensure UI updates happen on the Event Dispatch Thread
+                SwingUtilities.invokeLater(() -> searchAndUpdate());
+            }
+        }, DEBOUNCE_DELAY);
     }
 
     /**
